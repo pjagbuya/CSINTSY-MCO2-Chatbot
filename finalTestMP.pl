@@ -1,4 +1,4 @@
-% Update your python with
+ python with
 % ->pip install git+https://github.com/yuce/pyswip@master#egg=pyswip
 % Declare your dynamically changing predicates
 % ALWAYS Assign Response with 'This Type of string', because "This is
@@ -23,6 +23,7 @@
 :- dynamic parents/3.
 :- dynamic children/4.
 :- dynamic siblings/2.
+:- dynamic relatives/2.
 
 % GENERALIST SECTION
 % Already handles the type of sentence it is giving
@@ -120,17 +121,22 @@ map_predicate("grandfathers", grandfather).
 fact_case(Sentence, Response) :-
     string_lower(Sentence, LowerCaseSentence),
     split_string(LowerCaseSentence, " ,.", " ", Words), % Second parameter of space comma period ensures the substrings and passed words wont have punctuation
-    (   process_common_case(Words);  % Find the common sentence structure
-         match_case(Words)),         % Find the common word
-    Response = 'OK I learned something.'.
+    (   (process_common_case(Words);  % Find the common sentence structure
+         match_case(Words) ) -> Response = 'OK I learned something.';
+    Response = 'That\'s impossible!').         % Find the common word
+
+assert_fact(Predicate, FirstName, LastName) :-
+    NewFact =.. [Predicate, FirstName, LastName],
+    \+ clause(NewFact, true),  % Check if the fact is not already in the database
+    assertz(NewFact).
 
 % helper func for the process_common_case
 construct_and_assert(Predicate, FirstName, LastName) :-
     Fact =.. [Predicate, FirstName, LastName],  % automatically create example: father(X, Y) into the database, no saving yet
-    (  \+ clause(Fact, true) -> infer_logic(Predicate, FirstName, LastName); true).  % Check first if in database, else just declare true
+    (  \+ clause(Fact, true) -> infer_logic(Predicate, FirstName, LastName); fail).  % If the fact
 
 
-% Save facts once user exits
+% Save facts once user exits UNFINBISHED
 save_facts_to_file :-
     tell('kBase/factsDB.pl'),
     listing(sister/2),
@@ -170,7 +176,6 @@ match_case([Name1, Name2, "and", Name3, "are", "children", "of", Name4]):-
 
 
 
-
 % QUESTION CASES
 % Identifies a questtion sample question case
 query_case(Sentence, Response) :-
@@ -185,12 +190,13 @@ process_common_query([_|Words], Response) :-
     extract_names_and_relation(Words, FirstName, LastName, Relation),
     map_predicate(Relation, Predicate),
     Fact =.. [Predicate, FirstName, LastName],
-    (   clause(Fact, true) -> Response = 'Yes!'
-        ; \+ clause(Fact, true) -> Response = 'That\'s impossible!'
+    (   (call(Fact) ; clause(Fact, true) ) -> Response = 'Yes!',  assert_fact(Predicate, FirstName, LastName)
+        ; (\+ call(Fact)) -> Response = 'No!'
     ).
 process_common_who(Words, Response):-
     extract_names_and_relation(Words, Name, Relation),
     map_predicate(Relation, Predicate),
+    ( Relation = "children" -> map_predicate("child", Predicate); true),
     findall(Member, call(Predicate, Member, Name), Members),
     string_concat('Sorry, I don\'t recall them having ', Relation, Result),
    (   Members = [] -> Response = Result; Response = Members).
@@ -199,54 +205,258 @@ process_common_who(Words, Response):-
 
 is_start_who([FirstWord|_]):-
     FirstWord = "who".
+
 % Are _ and _ siblings? (Unfinished)
 % Put down the following and see let PL identify which predicate aligns
 match_case([ "are", Name1, "and", Name2, "siblings"], Response):-
     (   siblings(Name1, Name2) -> Response = 'Yes!';
-        \+ siblings(Name1, Name2) -> Response = 'That\'s Impossible!').
+        \+ siblings(Name1, Name2) -> Response = 'No!').
     % infer_siblings will not be used anymore since it is possible to have mixed_siblings
 
 
 % Are  _ and _ parents of _ ?(Unfinished)
 match_case(["are", Name1, "and", Name2, "parents", "of", Name3], Response):-
-    infer_logic(parents, Name1, Name2, Name3),
-    Response = 'temp'.   % Temporary response section
+    (   parents(Name1, Name2, Name3) -> Response = 'Yes!';
+        \+ parents(Name1, Name2, Name3) -> Response = 'No!').
+
 
 % Are _, _, and _ children of _ ?(Unfinished)
 match_case(["are", Name1, Name2, "and", Name3, "children", "of", Name4], Response):-
-    infer_logic(children, Name1, Name2, Name3, Name4),
-    Response = 'temp'.
+    (   children(Name1, Name2, Name3, Name4) -> Response = 'Yes!';
+        \+ children(Name1, Name2, Name3, Name4) -> Response = 'No!').
+
 % Are _ and _ relatives?(Unfinished)
 match_case(["are", Name1, "and", Name2, "relatives"], Response):-
-    infer_logic(children, Name1, Name2),
-    Response = 'temp'.
+    (   relatives(Name1, Name2) -> Response = 'Yes!';
+     \+ relatives(Name1, Name2) -> Response = 'No!').
+
+% QUERY LOGIC SECTION FOR INFERENCE LOGIC
+% commas(',') are 'and'
+% semicolons(';') are 'or'
+% These predicates automatically asserts IF (:-) the following
+% predicates are also true
+% Read this as, if X is sister of Y, and Child
+% is child of Y, X is aunt of Child
+% logic below follow format, no need to assert, inference logic of bot
+% should just understand based on your below recommendations
 
 
-% INFERENCE LOGIC SECTION
-%
-% INference logic for SISTER, assumes that x is a sister of y and vice
-% versa
-% they are considered siblings
-% half sibling or not is not accounted
-% Age between each other is not accounted
-infer_logic(sister, X, Y):-
-    (   \+ sister(X, Y) -> assertz(sister(X, Y)) ;true),
+
+
+
+% Concludes he/she is the auntiee
+aunt(X, Child) :-
+    X \= Child,
+    sister(X, Y),
+    child(Child, Y); true.
+
+% Concludes he/she is the auntiee
+aunt(Y, Child) :-
+    Y \= Child,
+    sister(Y, X),
+    child(Child, X).
+
+uncle(X, Child) :-
+    X \= Child,
+    brother(X, Y),
+    child(Child, Y).
+
+uncle(Y, Child) :-
+    Y \= Child,
+    brother(Y, X),
+    child(Child, X).
+
+child(X, Parent):-
+    son(X, Parent);
+    daughter(X, Parent).
+
+
+% Logic for son
+
+
+%Logic for Daughter
+
+% Logic for Father
+
+
+%Logic for Mother
+
+
+% Logic for Grandfather
+
+
+%Logic for Grandmother
+
+
+
+% Concludes they are siblings
+siblings(X, Y):-
+    (sister(X, Y); sister(Y, X);
+    brother(X, Y); brother(Y, X)).
+
+
+% Concludes Child is a child of P1 and P2
+parents(P1, P2, Child):-
+    P1 \= P2,
+    P2 \= Child,
+    P1 \= Child,
+    child(Child, P1),
+    child(Child, P2).
+
+
+
+
+children(Name1, Name2, Name3, Parent) :-
+    ( child(Name1, Parent),child(Name2, Parent), child(Name3, Parent) );
+    false.
+
+
+
+
+% Concludes that they are related by any means is relatives, lacks
+% backtracking through ancestors
+% Recursive Check to conclude they are relatives or not
+% Direct relationships
+relatives(X, Y) :-
+    direct_relative(X, Y).
+relatives(X, Y) :-
+    direct_relative(X, Z),
+    Z \= Y,
+    relatives(Z, Y).
+direct_relative(X, Y) :-
+    sister(X, Y);sister(Y, X);
+    child(X, Y); child(Y, X);
+    father(X, Y); father(Y, X);
+    mother(X, Y); mother(Y, X);
+    brother(X, Y); brother(Y, X);
+    aunt(X, Y); aunt(Y, X);
+    uncle(X, Y); uncle(Y, X);
+    son(X, Y); son(Y, X);
+    daughter(X, Y); daughter(Y, X);
+    siblings(X, Y); siblings(Y, X);
+    grandmother(X, Y); grandmother(Y, X);
+    grandfather(X, Y); grandfather(Y, X).
+
+
+
+% FACT INFERENCE AND ASSERTION LOGIC SECTION
+% When asserting facts, it should be able to deduce which facts are
+% contradictory
+% INference logic for SISTER, assumes that x is a sister
+% of y and vice versa they are considered siblings half sibling or not
+% is not accounted Age between each other is not accounted
+
+
+
+% Cannot be a sibling of oneself
+infer_logic(siblings, X, Y):-
     learn_siblings(X, Y).
 
-% HELP HERE, provide more inference logic below follow format
-% infer_logic(predicate, X, Y).
-infer_logic(children, Name1, Name2, Name3, Parent):-
-    assertz(children(Name1, Name2, Name3, Parent)),
-    assertz(child(Name1,Parent)),
-    assertz(child(Name2,Parent)),
-    assertz(child(Name3,Parent)).
 
+infer_logic(sister, X, Y):-
+     learn_siblings(X, Y),
+     (   \+ sister(X, Y) -> assertz(sister(X, Y)); true) .
+
+
+
+% You cannot be an aunt of someone whom you are of similar or older age
+infer_logic(aunt, X, Y):-
+      \+ (father(Y, X); mother(Y, X);
+         brother(Y, X); sister(Y, X);
+         uncle(Y, X); grandfather(Y, X);
+         grandmother(Y, X)),
+         X \= Y,
+    (   \+ aunt(X, Y) -> assertz(aunt(X, Y)) ;true).
+
+
+% You cannot be an aunt of someone whom you are of similar or older age
+infer_logic(uncle, X, Y):-
+          \+ (father(Y, X); mother(Y, X);
+         brother(Y, X); sister(Y, X);
+         uncle(Y, X); grandfather(Y, X);
+         grandmother(Y, X)),
+          X \= Y,
+    (  \+ uncle(X, Y) -> assertz(uncle(X, Y)) ;true).
+
+infer_logic(brother, X, Y):-
+    learn_siblings(X, Y),
+    (  \+ brother(X, Y)  -> assertz(brother(X, Y)); true) .
+
+
+infer_logic(father, X, Y):-
+     X \= Y,
+    (  \+ father(X, Y) -> assertz(father(X, Y)) ;true).
+infer_logic(mother, X, Y):-
+     X \= Y,
+    (  \+ mother(X, Y) -> assertz(mother(X, Y)) ;true).
+
+infer_logic(child, X, Parent):-
+     X \= Parent,
+     \+ child(X, Parent),
+    at_most_two_unique_parents(X),
+    assertz(child(X, Parent)).
+
+
+infer_logic(son, X, Parent):-
+     X \= Parent,
+    (  \+ son(X, Parent) -> assertz(son(X, Parent)) ;true).
+infer_logic(daughter, X, Parent):-
+
+    (   \+ daughter(X, Parent) -> assertz(daughter(X, Parent)) ;true).
+
+infer_logic(grandfather, X, Y):-
+    (   \+ grandfather(X, Y) -> assertz(sister(X, Y)) ;true).
+infer_logic(grandmother, X, Y):-
+    (   \+ grandmother(X, Y) -> assertz(brother(X, Y)) ;true).
+
+
+
+
+
+infer_logic(children, Name1, Name2, Name3, Parent):-
+    (valid_parent_child(Name1, Parent),
+     valid_parent_child(Name2, Parent),
+     valid_parent_child(Name3, Parent),
+     assertz(child(Name1,Parent)),
+     assertz(child(Name2,Parent)),
+     assertz(child(Name3,Parent)) ).
+
+
+% Helper predicate to check if a parent-child assertion is valid
+valid_parent_child(Child, Parent) :-
+    \+ child(Child, Parent),  % The Parent is not already a parent of the Child
+    can_have_additional_parent(Child).  % The Child can have an additional parent
+% Check if a child can have an additional parent
+can_have_additional_parent(Child) :-
+    findall(P, child(Child, P), Parents),
+    length(Parents, Count),
+    Count < 2.  % There are less than 2 parents
 
 infer_logic(parents, P1, P2, Child):-
-    assertz(parents(P1, P2, Child)).
+    add_parents_to_child(P1, P2, Child),
+
+      (\+ clause(parents(P1, P2, Child), true) ->
+        assertz(parents(P1, P2, Child))
+    ;   true).
 
 
 
+% Helper functions to not allow facts to state more than two parents
+at_most_two_unique_parents(Child) :-
+    findall(Parent, child(Child, Parent), Parents),
+     sort(Parents, UniqueParents),
+     length(UniqueParents, Count),
+     Count < 2.                       %Used in assert logic
+
+
+add_parents_to_child(P1, P2, Child):-
+    (   \+ at_most_two_unique_parents(Child) -> child(Child, P1), child(Child, P2); false ),
+   (    at_most_two_unique_parents(Child), \+ child(Child, P1)
+        -> assertz(child(Child, P1)); true
+   ),
+   (    at_most_two_unique_parents(Child), \+ child(Child, P2)
+        -> assertz(child(Child, P1)); true
+   ).
 
 
 
@@ -282,40 +492,53 @@ infer_siblings :-
      list_to_set(NewPairs, UniquePair), % Remove duplicate pairings
      maplist(assert_new_siblings_pair, UniquePair). % save them back to the running pl
 
-% Helper function to accept the tuple
-assert_new_siblings_pair((X, Y)) :-
-    learn_siblings(X, Y).
 
-% Creates kBase directory if it does not exist yet
-ensure_directory_exists(Directory) :-
-    exists_directory(Directory)-> true;
-    make_directory(Directory).
 
-% Saves into one file by appending, change 'append' to 'tell' or vice
+% Saves into one file all relations
 % versa if you want to overwrite
-save_siblings :-
-    ensure_directory_exists('kBase'),
-    tell('kBase/siblingsDB.pl'),
-    listing(siblings),
-    told.
+save_all :-
+    tell('kBase/allDB.pl'),
+    listing(sister/2),
+    listing(father/2),
+    listing(mother/2),
+    listing(brother/2),
+    listing(grandmother/2),
+    listing(daughter/2),
+    listing(uncle/2),
+    listing(child/2),
+    listing(son/2),
+    listing(aunt/2),
+    listing(grandfather/2),
+    listing(parents/3),
+    listing(children/4),
+    listing(siblings/2),
+    listing(relatives/2),
+    told.                   % Close the file
 
 
 
 
 % loads the database of siblingsDB containing all people who are
 % siblings
-load_siblings :-
-    consult('kBase/siblingsDB.pl').
+load_all :-
+    consult('kBase/allDB.pl').
 
 % deletes all data of siblings
-delete_siblings :-
+delete_all :-
+    retractall(sister(_, _)),
+    retractall(father(_, _)),
+    retractall(mother(_, _)),
+    retractall(brother(_, _)),
+    retractall(grandmother(_, _)),
+    retractall(daughter(_, _)),
+    retractall(uncle(_, _)),
+    retractall(child(_, _)),
+    retractall(son(_, _)),
+    retractall(aunt(_, _)),
+    retractall(grandfather(_, _)),
+    retractall(parents(_, _, _)),
+    retractall(children(_, _, _, _)),
     retractall(siblings(_, _)),
-    (   exists_file('kBase/siblingsDB.pl')
-    ->  open('kBase/siblingsDB.pl', write, Stream),
-        close(Stream); % This is what happens when if is true
-    false).            % This is what happens if it is false, prints false
+    retractall(relatives(_, _)).
 
 
-
-% This is nothing
-newgame(X) :- retractall(secret_num(_)), asserta(secret_num(X)).
