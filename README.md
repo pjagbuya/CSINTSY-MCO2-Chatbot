@@ -1,8 +1,17 @@
 # CSINTSY-MCO2-Chatbot
 Comments already tell some story
 
-Mainly contribute to the INFERENCE LOGIC SECTION, to figure logical things to add or view from the data asserted
+call - means calling the predicate and using concluding statements
+clause - means the fact was injected into the brain, therefore must be true when it is inserted into the knowledgebase
 
-Some of the match_case of QUESTION CASES have responses not yet assigned properly, match_case for siblings is already an example
+There are two parts of the logic, one is when the user is trying to insert a new fact, but we also avoid contradicting previous facts and rules
+and the one querying fact, where when a user queries something, the machine would be able to correlate from the DB that the data does indeed exist without explicitly stating
 
-Have not implemented loading and saving files but feel free to add those in the python code
+
+FACT INFERENCE AND ASSERTION LOGIC SECTION
+- Here is where you identify inference logic when stating a new fact
+- MISSING LOGICS: daughter, son, father, mother, grandmother, grandfather
+
+QUERY LOGIC SECTION FOR INFERENCE LOGIC
+- This is the logic on how the bot concludes something, given some secondary info that does not explicitly state the predicate
+-  MISSING LOGICS: daughter, son, father, mother, grandmother, grandfather
