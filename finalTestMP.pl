@@ -18,6 +18,7 @@
 :- dynamic aunt/2.
 :- dynamic uncle/2.
 :- dynamic grandfather/2.
+:- dynamic parent/2.
 :- dynamic parents/3.
 :- dynamic children/4.
 :- dynamic siblings/2.
@@ -240,10 +241,10 @@ match_case(["are", Name1, "and", Name2, "relatives"], Response):-
 
 % Gender Here
 female(X):-
-    Y \= male(X).
+    grandmother(X, _) ; mother(X, _) ; aunt(X, _) ; daughter(_, X) ; sister(X, _).
 
 male(X):-
-    X \= female(X).
+    grandfather(X, _) ; father(X, _) ; uncle(X, _) ; son(_, X) ; brother(X, _).
 
 % Concludes he/she is the auntiee
 aunt(Y, Child):-
@@ -257,49 +258,47 @@ uncle(Y, Child):-
     child(Child, X).
 
 child(X, Parent):-
+    X \= Parent,
     son(X, Parent);
     daughter(X, Parent).
 
 % Logic for son
 son(X, Parent):-
     male(X),
-    parent(Parent, X),
-    child(X, Parent).
+    parent(Parent, X).
 
 %Logic for Daughter
 
 daughter(X, Parent):-
     female(X),
-    parent(Parent, X),
-    child(X, Parent).
+    parent(Parent, X).
 
 % Logic for Father
 father(X, Child):-
     male(X),
-    parent(X, Child),
-    child(Child, X).
+    parent(X, Child).
 
 %Logic for Mother
 mother(X, Child):-
-    female(X)
-    parent(X, Child),
-    child(Child, X).
+    female(X),
+    parent(X, Child).
 
 % Logic for Grandfather
 grandfather(X, Grandchild):-
     male(X),
-    father(X, parent(Y, Grandchild)).
+    father(X, Y),
+    parent(Y, Grandchild).
 
 %Logic for Grandmother
 grandmother(X, Grandchild):-
     female(X),
-    mother(X, parent(Y, Grandchild)).
+    mother(X, Y),
+    parent(Y, Grandchild).
 
 % Concludes they are siblings
 siblings(X, Y):-
     (sister(X, Y); sister(Y, X);
     brother(X, Y); brother(Y, X)).
-
 
 % Concludes Child is a child of P1 and P2
 parents(P1, P2, Child):-
