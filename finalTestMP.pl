@@ -1,4 +1,3 @@
- python with
 % ->pip install git+https://github.com/yuce/pyswip@master#egg=pyswip
 % Declare your dynamically changing predicates
 % ALWAYS Assign Response with 'This Type of string', because "This is
@@ -77,8 +76,6 @@ extract_names_and_relation([_|Rest], LastName, Relation):-
 
 
 
-
-
 % MAPPING SECTION
 
 % Predicate mapping, modify some predicates if you feel like there is a
@@ -110,7 +107,6 @@ map_predicate("children", child).
 map_predicate("sons", son).
 map_predicate("aunts", aunt).
 map_predicate("grandfathers", grandfather).
-
 
 
 
@@ -245,21 +241,10 @@ match_case(["are", Name1, "and", Name2, "relatives"], Response):-
 
 
 % Concludes he/she is the auntiee
-aunt(X, Child) :-
-    X \= Child,
-    sister(X, Y),
-    child(Child, Y); true.
-
-% Concludes he/she is the auntiee
 aunt(Y, Child) :-
     Y \= Child,
     sister(Y, X),
     child(Child, X).
-
-uncle(X, Child) :-
-    X \= Child,
-    brother(X, Y),
-    child(Child, Y).
 
 uncle(Y, Child) :-
     Y \= Child,
@@ -270,23 +255,34 @@ child(X, Parent):-
     son(X, Parent);
     daughter(X, Parent).
 
-
 % Logic for son
-
+son(X, Parent):-
+    parent(Parent, X),
+    child(X, Parent).
 
 %Logic for Daughter
 
-% Logic for Father
+daughter(X, Parent):-
+    parent(Parent, X),
+    child(X, Parent).
 
+% Logic for Father
+father(X, Child):-
+    parent(Parent, X),
+    child(X, Parent).
 
 %Logic for Mother
-
+mother(X, Child):-
+    parent(X, Child),
+    child(Child, X).
 
 % Logic for Grandfather
-
+grandfather(X, Grandchild):-
+    father(X, parent(Y, Grandchild)).
 
 %Logic for Grandmother
-
+grandmother(X, Grandchild):-
+    mother(X, parent(Y, Grandchild)).
 
 
 % Concludes they are siblings
@@ -303,15 +299,8 @@ parents(P1, P2, Child):-
     child(Child, P1),
     child(Child, P2).
 
-
-
-
 children(Name1, Name2, Name3, Parent) :-
-    ( child(Name1, Parent),child(Name2, Parent), child(Name3, Parent) );
-    false.
-
-
-
+    ( child(Name1, Parent),child(Name2, Parent), child(Name3, Parent) ).
 
 % Concludes that they are related by any means is relatives, lacks
 % backtracking through ancestors
@@ -371,11 +360,11 @@ infer_logic(aunt, X, Y):-
 
 % You cannot be an aunt of someone whom you are of similar or older age
 infer_logic(uncle, X, Y):-
-          \+ (father(Y, X); mother(Y, X);
-         brother(Y, X); sister(Y, X);
-         uncle(Y, X); grandfather(Y, X);
-         grandmother(Y, X)),
-          X \= Y,
+    \+ (father(Y, X); mother(Y, X);
+        brother(Y, X); sister(Y, X);
+        uncle(Y, X); grandfather(Y, X);
+        grandmother(Y, X)),
+    X \= Y,
     (  \+ uncle(X, Y) -> assertz(uncle(X, Y)) ;true).
 
 infer_logic(brother, X, Y):-

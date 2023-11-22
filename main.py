@@ -1,8 +1,7 @@
 from pyswip import Prolog
 
-
 prolog = Prolog()
-file_dir_to_PL = "../finalTestMP.pl"
+file_dir_to_PL = "finalTestMP.pl"
 prolog.consult(file_dir_to_PL)
 
 
