@@ -18,6 +18,7 @@
 :- dynamic aunt/2.
 :- dynamic uncle/2.
 :- dynamic grandfather/2.
+:- dynamic parent/2.
 :- dynamic parents/3.
 :- dynamic children/4.
 :- dynamic siblings/2.
@@ -240,7 +241,7 @@ match_case(["are", Name1, "and", Name2, "relatives"], Response):-
 
 % Gender Here
 female(X):-
-    Y \= male(X).
+    X \= male(X).
 
 male(X):-
     X \= female(X).
@@ -281,19 +282,21 @@ father(X, Child):-
 
 %Logic for Mother
 mother(X, Child):-
-    female(X)
+    female(X),
     parent(X, Child),
     child(Child, X).
 
 % Logic for Grandfather
 grandfather(X, Grandchild):-
     male(X),
-    father(X, parent(Y, Grandchild)).
+    parent(Y, Grandchild),
+    father(X, Y).
 
 %Logic for Grandmother
 grandmother(X, Grandchild):-
     female(X),
-    mother(X, parent(Y, Grandchild)).
+    parent(Y, Grandchild),
+    mother(X, Y).
 
 % Concludes they are siblings
 siblings(X, Y):-
