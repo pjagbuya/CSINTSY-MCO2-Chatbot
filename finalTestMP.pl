@@ -242,6 +242,7 @@ match_case(["are", Name1, "and", Name2, "relatives"], Response):-
 % Gender Here
 female(X):-
     grandmother(X, _) ; mother(X, _) ; aunt(X, _) ; daughter(_, X) ; sister(X, _).
+    X \= male(X).
 
 male(X):-
     grandfather(X, _) ; father(X, _) ; uncle(X, _) ; son(_, X) ; brother(X, _).
@@ -282,18 +283,24 @@ father(X, Child):-
 mother(X, Child):-
     female(X),
     parent(X, Child).
+    parent(X, Child),
+    child(Child, X).
 
 % Logic for Grandfather
 grandfather(X, Grandchild):-
     male(X),
     father(X, Y),
     parent(Y, Grandchild).
+    parent(Y, Grandchild),
+    father(X, Y).
 
 %Logic for Grandmother
 grandmother(X, Grandchild):-
     female(X),
     mother(X, Y),
     parent(Y, Grandchild).
+    parent(Y, Grandchild),
+    mother(X, Y).
 
 % Concludes they are siblings
 siblings(X, Y):-
