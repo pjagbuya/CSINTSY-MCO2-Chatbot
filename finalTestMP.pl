@@ -8,21 +8,22 @@
 % relatives is part of the requirement and not implemented yet
 
 :- dynamic sister/2.
+:- dynamic brother/2.
 :- dynamic father/2.
 :- dynamic mother/2.
-:- dynamic sister/2.
-:- dynamic brother/2.
 :- dynamic grandmother/2.
 :- dynamic daughter/2.
-:- dynamic uncle/2.
 :- dynamic child/2.
 :- dynamic son/2.
 :- dynamic aunt/2.
+:- dynamic uncle/2.
 :- dynamic grandfather/2.
 :- dynamic parents/3.
 :- dynamic children/4.
 :- dynamic siblings/2.
 :- dynamic relatives/2.
+:- dynamic female/1.
+:- dynamic male/1.
 
 % GENERALIST SECTION
 % Already handles the type of sentence it is giving
@@ -237,16 +238,20 @@ match_case(["are", Name1, "and", Name2, "relatives"], Response):-
 % should just understand based on your below recommendations
 
 
+% Gender Here
+female(X):-
+    Y \= male(X).
 
-
+male(X):-
+    X \= female(X).
 
 % Concludes he/she is the auntiee
-aunt(Y, Child) :-
+aunt(Y, Child):-
     Y \= Child,
     sister(Y, X),
     child(Child, X).
 
-uncle(Y, Child) :-
+uncle(Y, Child):-
     Y \= Child,
     brother(Y, X),
     child(Child, X).
@@ -257,33 +262,38 @@ child(X, Parent):-
 
 % Logic for son
 son(X, Parent):-
+    male(X),
     parent(Parent, X),
     child(X, Parent).
 
 %Logic for Daughter
 
 daughter(X, Parent):-
+    female(X),
     parent(Parent, X),
     child(X, Parent).
 
 % Logic for Father
 father(X, Child):-
-    parent(Parent, X),
-    child(X, Parent).
+    male(X),
+    parent(X, Child),
+    child(Child, X).
 
 %Logic for Mother
 mother(X, Child):-
+    female(X)
     parent(X, Child),
     child(Child, X).
 
 % Logic for Grandfather
 grandfather(X, Grandchild):-
+    male(X),
     father(X, parent(Y, Grandchild)).
 
 %Logic for Grandmother
 grandmother(X, Grandchild):-
+    female(X),
     mother(X, parent(Y, Grandchild)).
-
 
 % Concludes they are siblings
 siblings(X, Y):-
@@ -334,7 +344,6 @@ direct_relative(X, Y) :-
 % INference logic for SISTER, assumes that x is a sister
 % of y and vice versa they are considered siblings half sibling or not
 % is not accounted Age between each other is not accounted
-
 
 
 % Cannot be a sibling of oneself
