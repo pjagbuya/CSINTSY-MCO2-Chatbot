@@ -1,16 +1,28 @@
 import re
+class c:
+   PURPLE = '\033[95m'
+   CYAN = '\033[96m'
+   DARKCYAN = '\033[36m'
+   BLUE = '\033[94m'
+   GREEN = '\033[92m'
+   YELLOW = '\033[93m'
+   RED = '\033[91m'
+   BOLD = '\033[1m'
+   UNDERLINE = '\033[4m'
+   END = '\033[0m'
 
 from pyswip import Prolog
 prolog = Prolog()
 results = bool(list(prolog.query("[\'newKB.pl\', \'assertions.pl\']")))
-print("[PROLOG] Successfully Connected to Knowledge Base!" if results else "[PROLOG] Failed to Connect to Knowledge Base!")
+print(c.BOLD + "[PROLOG]" + c.END +" Successfully Connected to Knowledge Base!" if results
+      else "[PROLOG] Failed to Connect to Knowledge Base!")
 # prolog.consult("[\'newKB.pl\', \'saved.pl\']")
 
 #for sentence pattern relationship
 singular_rel = ["sibling", "brother", "sister",
                 "father", "mother", "parent",
                 "grandmother", "grandfather", "child",
-                "daughter", "son", "uncle", "aunt" ]
+                "daughter", "son", "uncle", "aunt", "relatives"]
 
 # Regex Pattern for Questions
 yesNoQuestions = [  r'Are (.+) and (.+) siblings\?',                r'Is (.+) a sister of (.+)\?',
@@ -99,7 +111,7 @@ def constructResult(pattern, rel, promptType):
 
             try:
                 results = list(prolog.query(query))
-                print(f"Raw Results: {results}")
+                # print(f"Raw Results: {results}")
 
                 for result in results:
                     print(result['X'])
@@ -143,19 +155,23 @@ def parseSentence(sentence):
             pattern, rel = findPattern(sentence, factStatements)
 
     if pattern and rel:
-        print(pattern, pattern.groups())
+        # print(pattern, pattern.groups())
         constructResult(pattern, rel, promptType)
         return
     
     print("Invalid Prompt, try again.")
+    
+print('#'*50)
+print((" "*48).join('#'*2))
+print(f"#    Hi there, welcome to our {c.BOLD}{c.BLUE}Chatbot System{c.END}.    #")
+print((" "*48).join('#'*2))
+print('#'*50)
 
 while True:
-    print("\n-------------------------\n    WELCOME TO THE CHATBOT!\n-------------------------")
-    
     # DEBUGGING
-    sentence = "Is bro a brother of alex?"
+    debugger = "Is bro a brother of alex?"
     
-    choice = input("> ")
+    choice = input(f"\n$ {c.CYAN}Prompt{c.END} > ")
     # results = bool(list(prolog.query(choice)))
     # print(results)
     

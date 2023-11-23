@@ -15,7 +15,13 @@
 :- dynamic sibling/2.
 :- dynamic brother/2.
 :- dynamic sister/2.
+:- dynamic ancestor/2.
 :- discontiguous infer/3.
+
+aunt(X,Y):-
+    female(X),
+    sister(X,Z),
+    parent(Z,Y).
 
 mother(X,Y):-
     female(X),
@@ -27,13 +33,11 @@ father(X,Y):-
 
 grandmother(X,Z):-
     female(X),
-    grandparent(X,Z);
-    (mother(X,Y), mother(Y,Z)).
+    (mother(X,Y), parent(Y,Z)).
 
 grandfather(X,Z):-
     male(X),
-    grandparent(X,Z);
-    (father(X,Y), father(Y,Z)).
+    (father(X,Y), parent(Y,Z)).
 
 brother(X,Y):-
     male(X),
@@ -44,6 +48,31 @@ sister(X,Y):-
     female(X),
     sibling(X,Y) ;
     (parent(Par, X), parent(Par, Y)).
+
+% Concludes that they are related by any means is relatives, lacks
+% backtracking through ancestors
+% Recursive Check to conclude they are relatives or not
+% Direct relationships
+
+relatives(X, Y) :-
+    direct_relative(X, Y).
+relatives(X, Y) :-
+    direct_relative(X, Z),
+    Z \= Y,
+    relatives(Z, Y).
+direct_relative(X, Y) :-
+    sister(X, Y);sister(Y, X);
+    child(X, Y); child(Y, X);
+    father(X, Y); father(Y, X);
+    mother(X, Y); mother(Y, X);
+    brother(X, Y); brother(Y, X);
+    aunt(X, Y); aunt(Y, X);
+    uncle(X, Y); uncle(Y, X);
+    son(X, Y); son(Y, X);
+    daughter(X, Y); daughter(Y, X);
+    siblings(X, Y); siblings(Y, X);
+    grandmother(X, Y); grandmother(Y, X);
+    grandfather(X, Y); grandfather(Y, X).
 
 % INFERENCE SECTION %
 % Predicate Prototype
@@ -178,3 +207,23 @@ save_all :-
     listing(grandfather/2),
     listing(sibling/2),
     told.                   % Close the file
+
+assert_new_siblings_pair((X, Y)):-
+    assertz(sibling(X,Y)).
+
+% Given a transitive information, like john is siblings with carrie, and
+% carrie is siblings with Janna. This would identfiy that john is
+% siblings with Janna
+infer_siblings :-
+    findall((A,B), sibling(A,B), ThePairs), % parameter ('solution', 'goal'. OutputVariable)
+    findall((X, Y),
+    (
+        member((P1, X), ThePairs), % (Somewhat tuple), finds all people whom are siblings with X
+        member((P1, Y), ThePairs), % Finds all people who are siblings with Y
+        X \= Y,                    % A person is not their own siblings
+        \+ member((X, Y), ThePairs),% If the case that these two are not yet siblings
+        \+ member((Y, X), ThePairs) % If the case that these to ware not siblings
+
+     ), NewPairs),                 % Saved that case of not siblings to new pairs
+     list_to_set(NewPairs, UniquePair), % Remove duplicate pairings
+     maplist(assertz(sibling()), UniquePair). % save them back to the running pl
