@@ -544,5 +544,3 @@ delete_all :-
     retractall(children(_, _, _, _)),
     retractall(siblings(_, _)),
     retractall(relatives(_, _)).
-
-

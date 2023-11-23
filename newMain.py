@@ -1,4 +1,4 @@
-import re
+import re, os
 class c:
    PURPLE = '\033[95m'
    CYAN = '\033[96m'
@@ -13,8 +13,10 @@ class c:
 
 from pyswip import Prolog
 prolog = Prolog()
-results = bool(list(prolog.query("[\'newKB.pl\', \'assertions.pl\']")))
-print(c.BOLD + "[PROLOG]" + c.END +" Successfully Connected to Knowledge Base!" if results
+
+os.system('cls')
+connected = bool(list(prolog.query("[\'newKB.pl\', \'assertions.pl\']")))
+print(c.BOLD + "[PROLOG]" + c.END +" Successfully Connected to Knowledge Base!" if connected
       else "[PROLOG] Failed to Connect to Knowledge Base!")
 # prolog.consult("[\'newKB.pl\', \'saved.pl\']")
 
@@ -57,24 +59,12 @@ factStatements = {
     r'(.+) is an uncle of (.+)\.',          r'(.+) is an aunt of (.+)\.'                      #7
 }
 
-def infer(sentence):
-    pass
-
 def findRelationship(sentence):
     foundRel = None
-    
-    # # First check plural relationships since they are a priority.
-    # for rel in plural_rel:
-    #     findRelationship = re.search(r"\b%s" %rel, sentence)
 
-    #     if findRelationship:
-    #         foundRel = rel
-
-    # Check singular relationships after.
-    if foundRel is None:
-        for rel in singular_rel:
-            if re.search(r'\b%s' %rel, sentence):
-                foundRel = rel
+    for rel in singular_rel:
+        if re.search(r'\b%s' %rel, sentence):
+            foundRel = rel
 
     return foundRel
 
@@ -97,21 +87,23 @@ def constructResult(pattern, rel, promptType):
     match promptType:
         case "Boolean":
             query = rel + "(\'" + '\',\''.join(parameters) + "\')."
-            print(f"[QUERY] {query}")
+            # print(f"[QUERY] {query}")
 
             try:
                 results = bool(list(prolog.query(query)))
-                print(results)
+                print(f"$ {c.BOLD}{c.GREEN}CHATBOT{c.END} > ", end="")
+                print("Yes! You're absolutely right." if results else "No, that's not quite right.")
+
             except Exception as e:
                 print(f"Error: {e}")
 
         case "Who":
             query = f"{rel}(X,\'{parameters[0]}\')."
-            print(f"[QUERY] {query}")
+            # print(f"[QUERY] {query}")
 
             try:
                 results = list(prolog.query(query))
-                # print(f"Raw Results: {results}")
+                print(f"Raw Results: {results}")
 
                 for result in results:
                     print(result['X'])
@@ -121,11 +113,12 @@ def constructResult(pattern, rel, promptType):
             
         case "Insert":
             query = "infer(" + rel + ",\'" + "\',\'".join(parameters) + "\')."
-            print(f"[QUERY] {query}")
+            # print(f"[QUERY] {query}")
 
             try:
                 results = bool(list(prolog.query(query)))
-                print(results)
+                print(f"$ {c.BOLD}{c.GREEN}CHATBOT{c.END} > ", end="")
+                print("OK! I learned something." if results else "That's impossible!")
             except Exception as e:
                 print(f"Error: {e}")
 
@@ -140,10 +133,6 @@ def parseSentence(sentence):
     pattern, rel = None, None
     # Get the first word of the sentence
     match sentence.split()[0]:
-        case "save_all":
-            result = bool(list(Prolog.query("save_all.")))
-            print("Saved all.", result)
-            return
         case "Is" | "Are":
             promptType = "Boolean"
             pattern, rel = findPattern(sentence, yesNoQuestions)
@@ -160,19 +149,43 @@ def parseSentence(sentence):
         return
     
     print("Invalid Prompt, try again.")
-    
+
 print('#'*50)
 print((" "*48).join('#'*2))
-print(f"#    Hi there, welcome to our {c.BOLD}{c.BLUE}Chatbot System{c.END}.    #")
+print(f"#    Hi there, welcome to our {c.BOLD}{c.CYAN}CHATBOT SYSTEM{c.END}.    #")
 print((" "*48).join('#'*2))
 print('#'*50)
+print("To get started, input 'help' to view the commands!")
 
 while True:
     # DEBUGGING
-    debugger = "Is bro a brother of alex?"
+    # debugger = "Is bro a brother of alex?"
     
     choice = input(f"\n$ {c.CYAN}Prompt{c.END} > ")
+
     # results = bool(list(prolog.query(choice)))
     # print(results)
     
-    parseSentence(choice)
+    match choice.lower():
+        case "help":
+            print("Type any of the valid prompts and watch chatbot answer!\n")
+            print(f"{c.BOLD}[COMMANDS]{c.END}")
+            print("[ HELP ] - View commands and instructions.")
+            print("[ SAVE ] - Save the knowledge base.")
+            print("[DELETE] - Delete the knowledge base.")
+            print("[ EXIT ] - Exit the program.")
+
+        case "delete":
+            result = bool(list(Prolog.query("delete_all.")))
+            print("Successfully deleted the knowledge base!")
+
+        case "exit":
+            print("Exiting the program...")
+            break
+
+        case "save":
+            result = bool(list(Prolog.query("save_all.")))
+            print("Successfully saved knowledge base!" if result else "Something went wrong while saving knowledge base.")
+
+        case _:
+            parseSentence(choice)
