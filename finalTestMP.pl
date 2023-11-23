@@ -1,11 +1,3 @@
-% ->pip install git+https://github.com/yuce/pyswip@master#egg=pyswip
-% Declare your dynamically changing predicates
-% ALWAYS Assign Response with 'This Type of string', because "This is
-% considered byte string"
-% Underscores are considere Anon Variables, meaning you dont care
-% about their value and just there for syntax or list values that align
-% with the criteria
-% relatives is part of the requirement and not implemented yet
 
 :- dynamic sister/2.
 :- dynamic father/2.
@@ -106,7 +98,6 @@ map_predicate("brothers", brother).
 map_predicate("grandmothers", grandmother).
 map_predicate("daughters", daughter).
 map_predicate("uncles", uncle).
-map_predicate("children", child).
 map_predicate("sons", son).
 map_predicate("aunts", aunt).
 map_predicate("grandfathers", grandfather).
@@ -119,10 +110,11 @@ map_predicate("grandfathers", grandfather).
 % manipulation
 fact_case(Sentence, Response) :-
     string_lower(Sentence, LowerCaseSentence),
-    split_string(LowerCaseSentence, " ,.", " ", Words), % Second parameter of space comma period ensures the substrings and passed words wont have punctuation
-    (   (process_common_case(Words);  % Find the common sentence structure
-         match_case(Words) ) -> Response = 'OK I learned something.';
-    Response = 'That\'s impossible!').         % Find the common word
+    split_string(LowerCaseSentence, " ,.", "", Words), % Second parameter of space comma period ensures the substrings and passed words wont have punctuation
+    (   (match_case_f(Words, Response)->true;
+        process_common_case(Words, Response)  % Find the common sentence structure
+          ) -> true;
+    Response = 'That\'s impossible!'); false.         % Find the common word
 
 assert_fact(Predicate, FirstName, LastName) :-
     NewFact =.. [Predicate, FirstName, LastName],
@@ -131,37 +123,47 @@ assert_fact(Predicate, FirstName, LastName) :-
 
 
 % helper func for the process_common_case
-construct_and_assert(Predicate, FirstName, LastName) :-
+construct_and_assert(Predicate, FirstName, LastName, Response) :-
     Fact =.. [Predicate, FirstName, LastName],  % automatically create example: father(X, Y) into the database, no saving yet
-    (  \+ clause(Fact, true) -> infer_logic(Predicate, FirstName, LastName); fail).  % If the fact
+    (   Predicate \= children->
+    (  call(Fact) -> Response = "I already know that.";
+    \+ clause(Fact, true), Predicate \= children -> infer_logic(Predicate, FirstName, LastName),
+    Response = 'OK I learned something.'; false); false).  % If the fact
 
 
 % CASES SECTION
 % For all sentences that follow this pattern, modify respective cases on
 % what way of thinking they would have to do given the information and
 % predicate
-process_common_case(Words) :-
+process_common_case(Words, Response) :-
     extract_names_and_relation(Words, FirstName, LastName, Relation),
     map_predicate(Relation, Predicate),
-    construct_and_assert(Predicate, FirstName, LastName).
+    construct_and_assert(Predicate, FirstName, LastName, Response).
 
 
 % _ and _ are siblings (Unfinished)
 % Put down the following and see let PL identify which predicate aligns
-match_case([Name1, "and", Name2, "are", "siblings"]):-
-    learn_siblings(Name1, Name2).
+match_case_f([Name1, "and", Name2, "are", "siblings"], Response):-
+    ( siblings(Name1, Name2) -> Response="I already know that.";
+    (   (learn_siblings(Name1, Name2) )-> Response = "OK I learned something."; false)
+   ).
     % infer_siblings will not be used anymore since it is possible to have mixed_siblings
 
 
 
 % _ and _ are the parents of _ (Unfinished)
-match_case([Name1, "and", Name2, "are", "the", "parents", "of", Name3]):-
-    infer_logic(parents, Name1, Name2, Name3).
+match_case_f([Name1, "and", Name2, "are", "the", "parents", "of", Name3], Response):-
+    (( parents(Name1, Name2, Name3) -> Response="I already know that.";
+    (   infer_logic(parents, Name1, Name2, Name3))-> Response = "OK I learned something."; false)
+   ).
+
 
 
 % _, _ and _ are children of _ (Unfinished)
-match_case([Name1, Name2, "and", Name3, "are", "children", "of", Name4]):-
-    infer_logic(children, Name1, Name2, Name3, Name4).
+match_case_f([Name1,  "", Name2,  "", "and", Name3, "are", "children", "of", Name4], Response):-
+    (( children(Name1, Name2, Name3, Name4) -> Response="I already know that.";
+    (   infer_logic(children, Name1, Name2, Name3, Name4))-> Response = "OK I learned something."; false)
+   ).
 
 
 
