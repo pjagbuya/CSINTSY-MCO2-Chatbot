@@ -445,6 +445,8 @@ infer_logic(father, X, Y):-
          grandmother(X, Y)),
 
     (  \+ father(X, Y) -> assertz(father(X, Y)) ;true),
+    (  \+ parent(X, Y) -> assertz(parent(X, Y)) ;true),
+
      (   \+ male(X) -> assertz(male(X)); true).
 
 infer_logic(mother, X, Y):-
@@ -459,6 +461,7 @@ infer_logic(mother, X, Y):-
          uncle(X, Y); grandfather(X, Y);
          grandmother(Y, X)),
     (  \+ mother(X, Y) -> assertz(mother(X, Y)) ;true),
+    (  \+ parent(X, Y) -> assertz(parent(X, Y)) ;true),
      (   \+ female(X) -> assertz(female(X)); true).
 
 
