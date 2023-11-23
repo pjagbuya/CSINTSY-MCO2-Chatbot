@@ -34,7 +34,7 @@ yesNoQuestions = [  r'Are (.+) and (.+) siblings\?',                r'Is (.+) a 
                     r'Is (.+) a son of (.+)\?',                     r'Is (.+) a child of (.+)\?',
                     r'Are (.+) and (.+) children of (.+)\?',        r'Is (.+) an uncle of (.+)\?',
                     r'Is (.+) an aunt of (.+)\?',                   r'Are (.+) and (.+) relatives\?',
-                    r'Is (.+) grandfather of (.+)\?']
+                    r'Is (.+) a grandfather of (.+)\?']
 
 whoQuestions = [
     r'Who are the siblings of (.+)\?',
@@ -91,6 +91,7 @@ def constructResult(pattern, rel, promptType):
 
             try:
                 results = bool(list(prolog.query(query)))
+                # print(results)
                 print(f"$ {c.BOLD}{c.GREEN}CHATBOT{c.END} > ", end="")
                 print("Yes! You're absolutely right." if results else "No, that's not quite right.")
 
@@ -106,6 +107,7 @@ def constructResult(pattern, rel, promptType):
                 # print(f"Raw Results: {results}")
                 
                 if not bool(results):
+                    print(f"$ {c.BOLD}{c.GREEN}CHATBOT{c.END} > ", end="")
                     print("I don't currently know that.")
 
                 for result in results:
