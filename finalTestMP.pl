@@ -129,13 +129,11 @@ assert_fact(Predicate, FirstName, LastName) :-
     \+ clause(NewFact, true),  % Check if the fact is not already in the database
     assertz(NewFact).
 
+
 % helper func for the process_common_case
 construct_and_assert(Predicate, FirstName, LastName) :-
     Fact =.. [Predicate, FirstName, LastName],  % automatically create example: father(X, Y) into the database, no saving yet
     (  \+ clause(Fact, true) -> infer_logic(Predicate, FirstName, LastName); fail).  % If the fact
-
-
-
 
 
 % CASES SECTION
@@ -406,11 +404,10 @@ infer_logic(uncle, X, Y):-
       \+ parent(X, Y),
      \+ female(X),
      \+ siblings(X, Y),
-     \+ uncle(X, Y),  % Ensure X is not already an uncle of Y
      \+ aunt(X, Y),
      \+ parent(Y, X),
      \+ siblings(Y, X),
-     \+ uncle(Y, X),  % Ensure X is not already an uncle of Y
+     \+ uncle(Y, X), 
      \+ aunt(Y, X),
 
      assertz(uncle(X, Y)),
@@ -435,12 +432,10 @@ infer_logic(brother, X, Y):-
 infer_logic(father, X, Y):-
      X \= Y,
      \+ female(X),
-     \+ (father(Y, X); mother(Y, X);
-         siblings(Y, X);
+     \+ (siblings(Y, X);
          uncle(Y, X); grandfather(Y, X);
          grandmother(Y, X)),
-     \+ (father(X, Y); mother(X, Y);
-         siblings(X, Y);
+     \+ (         siblings(X, Y);
          uncle(X, Y); grandfather(X, Y);
          grandmother(X, Y)),
 
@@ -452,12 +447,10 @@ infer_logic(father, X, Y):-
 infer_logic(mother, X, Y):-
      X \= Y,
      \+ male(X),
-     \+ (father(Y, X); mother(Y, X);
-         siblings(Y, X);
+     \+ (siblings(Y, X);
          uncle(Y, X); grandfather(Y, X);
          grandmother(Y, X)),
-      \+ (father(X, Y); mother(X, Y);
-         siblings(X, Y);
+      \+ (         siblings(X, Y);
          uncle(X, Y); grandfather(X, Y);
          grandmother(Y, X)),
     (  \+ mother(X, Y) -> assertz(mother(X, Y)) ;true),
@@ -477,7 +470,7 @@ infer_logic(child, X, Parent):-
     \+ grandmother(X, Parent),
     \+ siblings(X, Parent),
     \+ uncle(X, Parent),
-    \+ aunt(X), Parent,
+    \+ aunt(X, Parent),
 
     at_most_two_unique_parents(X),
     assertz(child(X, Parent)),
