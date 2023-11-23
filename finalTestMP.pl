@@ -289,22 +289,24 @@ father(Parent, Child):-
 %Logic for Mother
 mother(Parent, Child):-
     female(Parent),
-    parent(Parent, Child),
-    child(Child, Parent).
+    (   parent(Parent, Child),
+    child(Child, Parent)).
 
 % Logic for Grandfather
 grandfather(X, Grandchild):-
     X \= Grandchild,
     male(X),
     father(X, Y),
-    child( Grandchild, Y).
+    (child( Grandchild, Y);
+    parent(Y, Grandchild)).
 
 %Logic for Grandmother
 grandmother(X, Grandchild):-
     X \= Grandchild,
     female(X),
     mother(X, Y),
-    child( Grandchild, Y).
+    (child( Grandchild, Y);
+    parent(Y, Grandchild)).
 
 
 % Concludes they are siblings
