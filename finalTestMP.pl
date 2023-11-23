@@ -8,23 +8,24 @@
 % relatives is part of the requirement and not implemented yet
 
 :- dynamic sister/2.
-:- dynamic brother/2.
 :- dynamic father/2.
 :- dynamic mother/2.
+:- dynamic sister/2.
+:- dynamic brother/2.
 :- dynamic grandmother/2.
 :- dynamic daughter/2.
+:- dynamic uncle/2.
 :- dynamic child/2.
 :- dynamic son/2.
 :- dynamic aunt/2.
-:- dynamic uncle/2.
 :- dynamic grandfather/2.
-:- dynamic parent/2.
 :- dynamic parents/3.
 :- dynamic children/4.
 :- dynamic siblings/2.
 :- dynamic relatives/2.
-:- dynamic female/1.
+:- dynamic parent/2.
 :- dynamic male/1.
+:- dynamic female/1.
 
 % GENERALIST SECTION
 % Already handles the type of sentence it is giving
@@ -244,13 +245,7 @@ check_children([Child|Rest], Parent, Response):-
 % should just understand based on your below recommendations
 
 
-% Gender Here
-female(X):-
-    grandmother(X, _) ; mother(X, _) ; aunt(X, _) ; daughter(_, X) ; sister(X, _).
-    X \= male(X).
 
-male(X):-
-    grandfather(X, _) ; father(X, _) ; uncle(X, _) ; son(_, X) ; brother(X, _).
 
 % Concludes he/she is the auntiee
 aunt(Y, Child) :-
@@ -269,8 +264,7 @@ uncle(Y, Child) :-
 child(X, Parent):-
     X \= Parent,
     (   son(X, Parent);
-    daughter(X, Parent);
-    parent(Parent, X)).
+    daughter(X, Parent) ).
 
 % Logic for son
 son(X, Parent):-
@@ -282,42 +276,41 @@ son(X, Parent):-
 
 daughter(X, Parent):-
     X \= Parent,
-    ( female(X)
-    , parent(Parent, X)) .
+    ( female(X), parent(Parent, X)) .
 
 % Logic for Father
 father(Parent, Child):-
     Parent \= Child,
-   ( male(Parent),( parent(Parent, Child);child(Child,Parent))  ).
+   ( male(Parent) ),
+   parent(Parent, Child).
 
 %Logic for Mother
 mother(Parent, Child):-
+    Parent \= Child,
     female(Parent),
-    (   parent(Parent, Child),
-    child(Child, Parent)).
+    parent(Parent, Child).
 
 % Logic for Grandfather
 grandfather(X, Grandchild):-
     X \= Grandchild,
     male(X),
     father(X, Y),
-    (child( Grandchild, Y);
-    parent(Y, Grandchild)).
+    parent(Y, Grandchild).
 
 %Logic for Grandmother
 grandmother(X, Grandchild):-
     X \= Grandchild,
     female(X),
     mother(X, Y),
-    (child( Grandchild, Y);
-    parent(Y, Grandchild)).
+    parent(Y, Grandchild).
 
 
 % Concludes they are siblings
 siblings(X, Y):-
     X \= Y,
     (sister(X, Y); sister(Y, X);
-    brother(X, Y); brother(Y, X)).
+    brother(X, Y); brother(Y, X));
+    (   parent(Parent, X), parent(Parent, Y)).
 
 
 % Concludes Child is a child of P1 and P2
@@ -327,31 +320,14 @@ parents(P1, P2, Child):-
     P1 \= Child,
     (   child(Child, P1),
         child(Child, P2));
-    (   parent(P1, Child), parent(P2, Child)).
-
-parent(Parent, Child):-
-    child(Child, Parent);
-    mother(Parent, Child);
-    father(Parent, Child).
+    (  parent(P1, Child),
+       parent(P2, Child)).
 
 children(Name1, Name2, Name3, Parent) :-
     ( child(Name1, Parent),child(Name2, Parent), child(Name3, Parent) );
     (   parent(Parent, Name1), parent(Parent, Name2), parent(Parent, Name3)).
 
 
-male(X):-
-    father(X, _);
-    son(X, _);
-    brother(X, _);
-    uncle(X, _);
-    grandfather(X, _).
-
-female(X):-
-    mother(X, _);
-    daughter(X, _);
-    sister(X, _);
-    aunt(X, _);
-    grandmother(X, _).
 % Concludes that they are related by any means is relatives, lacks
 % backtracking through ancestors
 % Recursive Check to conclude they are relatives or not
@@ -386,6 +362,7 @@ direct_relative(X, Y) :-
 % is not accounted Age between each other is not accounted
 
 
+
 % Cannot be a sibling of oneself
 infer_logic(siblings, X, Y):-
     learn_siblings(X, Y).
@@ -394,7 +371,14 @@ infer_logic(siblings, X, Y):-
 infer_logic(sister, X, Y):-
     \+ male(X),
      learn_siblings(X, Y),
-     (   \+ sister(X, Y) -> assertz(sister(X, Y)); true) .
+     \+ (father(Y, X); mother(Y, X);
+         uncle(Y, X); grandfather(Y, X);
+         grandmother(Y, X)),
+    \+ (father(X, Y); mother(X, Y);
+         uncle(X, Y); grandfather(X, Y);
+         grandmother(X, Y)),
+     (   \+ sister(X, Y) -> assertz(sister(X, Y)); true),
+     (   \+ female(X) -> assertz(female(X)); true).
 
 
 
@@ -404,30 +388,48 @@ infer_logic(aunt, X, Y):-
       \+ (father(Y, X); mother(Y, X);
          brother(Y, X); sister(Y, X);
          uncle(Y, X); grandfather(Y, X);
-         grandmother(Y, X);child(Y, X); child(X, Y)),
+         grandmother(Y, X);parent(Y, X)),
+        \+ (father(X, Y); mother(X, Y);
+         brother(X, Y); sister(X, Y);
+         uncle(X, Y); grandfather(X, Y);
+         grandmother(X, Y);parent(X, Y)),
+
          X \= Y,
-    (   \+ aunt(X, Y) -> assertz(aunt(X, Y)) ;true).
+    (   \+ aunt(X, Y) -> assertz(aunt(X, Y)) ;true),
+     (   \+ female(X) -> assertz(female(X)); true).
+
 
 
 % You cannot be an aunt of someone whom you are of similar or older age
 infer_logic(uncle, X, Y):-
-    \+ female(X),
-    \+ (father(Y, X); mother(Y, X);
-        brother(Y, X); sister(Y, X);
-        uncle(Y, X); grandfather(Y, X);
-        grandmother(Y, X);child(Y, X); child(X, Y)),
-    X \= Y,
-    (  \+ uncle(X, Y) -> assertz(uncle(X, Y)) ;true).
+      X \= Y,
+      \+ parent(X, Y),
+     \+ female(X),
+     \+ siblings(X, Y),
+     \+ uncle(X, Y),  % Ensure X is not already an uncle of Y
+     \+ aunt(X, Y),
+     \+ parent(Y, X),
+     \+ siblings(Y, X),
+     \+ uncle(Y, X),  % Ensure X is not already an uncle of Y
+     \+ aunt(Y, X),
+
+     assertz(uncle(X, Y)),
+     assertz(male(X)).
+
 
 infer_logic(brother, X, Y):-
     \+ female(X),
     learn_siblings(X, Y),
     \+ (father(Y, X); mother(Y, X);
-         siblings(Y, X);
          uncle(Y, X); grandfather(Y, X);
          grandmother(Y, X)),
+    \+ (father(X, Y); mother(X, Y);
+         uncle(X, Y); grandfather(X, Y);
+         grandmother(X, Y)),
 
-    (  \+ brother(X, Y)  -> assertz(brother(X, Y)); true) .
+    (  \+ brother(X, Y)  -> assertz(brother(X, Y)); true),
+     (   \+ male(X) -> assertz(male(X)); true).
+
 
 
 infer_logic(father, X, Y):-
@@ -437,7 +439,14 @@ infer_logic(father, X, Y):-
          siblings(Y, X);
          uncle(Y, X); grandfather(Y, X);
          grandmother(Y, X)),
-    (  \+ father(X, Y) -> assertz(father(X, Y)) ;true).
+     \+ (father(X, Y); mother(X, Y);
+         siblings(X, Y);
+         uncle(X, Y); grandfather(X, Y);
+         grandmother(X, Y)),
+
+    (  \+ father(X, Y) -> assertz(father(X, Y)) ;true),
+     (   \+ male(X) -> assertz(male(X)); true).
+
 infer_logic(mother, X, Y):-
      X \= Y,
      \+ male(X),
@@ -445,18 +454,31 @@ infer_logic(mother, X, Y):-
          siblings(Y, X);
          uncle(Y, X); grandfather(Y, X);
          grandmother(Y, X)),
-    (  \+ mother(X, Y) -> assertz(mother(X, Y)) ;true).
+      \+ (father(X, Y); mother(X, Y);
+         siblings(X, Y);
+         uncle(X, Y); grandfather(X, Y);
+         grandmother(Y, X)),
+    (  \+ mother(X, Y) -> assertz(mother(X, Y)) ;true),
+     (   \+ female(X) -> assertz(female(X)); true).
+
 
 infer_logic(child, X, Parent):-
      X \= Parent,
     \+ grandfather(Parent, X),
     \+ grandmother(Parent, X),
-    \+ sibling(Parent, X),
+    \+ siblings(Parent, X),
     \+ uncle(Parent, X),
     \+ aunt(Parent, X),
     \+ child(Parent, X),
+    \+ grandfather(X, Parent),
+    \+ grandmother(X, Parent),
+    \+ siblings(X, Parent),
+    \+ uncle(X, Parent),
+    \+ aunt(X), Parent,
+
     at_most_two_unique_parents(X),
-    assertz(child(X, Parent)).
+    assertz(child(X, Parent)),
+    assertz(parent(Parent, X)).
 
 
 infer_logic(son, X, Parent):-
@@ -464,42 +486,77 @@ infer_logic(son, X, Parent):-
      \+ female(X),
     \+ grandfather(Parent, X),
     \+ grandmother(Parent, X),
-    \+ sibling(Parent, X),
+    \+ siblings(Parent, X),
     \+ uncle(Parent, X),
     \+ aunt(Parent, X),
     \+ child(Parent, X),
-    (  \+ son(X, Parent) -> assertz(son(X, Parent)) ;true).
+    \+ grandfather(X, Parent),
+    \+ grandmother(X, Parent),
+    \+ siblings(X, Parent),
+    \+ uncle( X, Parent),
+    \+ aunt(X, Parent),
+
+    (  \+ son(X, Parent) -> assertz(son(X, Parent)) ;true),
+     (   \+ male(X) -> assertz(male(X)); true).
+
 infer_logic(daughter, X, Parent):-
      X \= Parent,
     \+ male(X),
     \+ grandfather(Parent, X),
     \+ grandmother(Parent, X),
-    \+ sibling(Parent, X),
+    \+ siblings(Parent, X),
     \+ uncle(Parent, X),
     \+ aunt(Parent, X),
     \+ child(Parent, X),
-    (   \+ daughter(X, Parent) -> assertz(daughter(X, Parent)) ;true).
+    \+ grandfather(X, Parent),
+    \+ grandmother(X, Parent),
+    \+ siblings(X, Parent),
+    \+ uncle(X, Parent),
+    \+ aunt(X, Parent),
+
+    (   \+ daughter(X, Parent) -> assertz(daughter(X, Parent)) ;true),
+     (   \+ female(X) -> assertz(female(X)); true).
+
 
 infer_logic(grandfather, X, Y):-
     X \= Y,
     \+ female(X),
     \+ father(Y, X),
     \+ mother(Y, X),
-    \+ sibling(Y, X),
+    \+ siblings(Y, X),
     \+ uncle(Y, X),
     \+ aunt(Y, X),
     \+ child(Y, X),
-    (   \+ grandfather(X, Y) -> assertz(grandfather(X, Y)) ;true).
+    \+ father(X, Y),
+    \+ mother(X, Y),
+    \+ siblings(X, Y),
+    \+ uncle(X, Y),
+    \+ aunt(X, Y),
+    \+ child(X, Y),
+
+    (   \+ grandfather(X, Y) -> assertz(grandfather(X, Y)) ;true),
+     (   \+ male(X) -> assertz(male(X)); true).
+
 infer_logic(grandmother, X, Y):-
     X \= Y,
     \+ male(X),
     \+ father(Y, X),
     \+ mother(Y, X),
-    \+ sibling(Y, X),
+    \+ siblings(Y, X),
     \+ uncle(Y, X),
     \+ aunt(Y, X),
     \+ child(Y, X),
-    (   \+ grandmother(X, Y) -> assertz(grandmother(X, Y)) ;true).
+
+    \+ father(X, Y),
+    \+ mother(X, Y),
+    \+ siblings(X, Y),
+    \+ uncle(X, Y),
+    \+ aunt(X, Y),
+    \+ child(X, Y),
+
+    (   \+ grandmother(X, Y) -> assertz(grandmother(X, Y)) ;true),
+     (   \+ female(X) -> assertz(female(X)); true).
+
 
 
 
@@ -511,7 +568,10 @@ infer_logic(children, Name1, Name2, Name3, Parent):-
      valid_parent_child(Name3, Parent),
      assertz(child(Name1,Parent)),
      assertz(child(Name2,Parent)),
-     assertz(child(Name3,Parent)) ).
+     assertz(child(Name3,Parent)),
+     assertz(parent(Parent,Name1)),
+     assertz(parent(Parent,Name2)),
+     assertz(parent(Parent,Name3)) ).
 
 
 % Helper predicate to check if a parent-child assertion is valid
