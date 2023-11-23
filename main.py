@@ -103,10 +103,13 @@ def constructResult(pattern, rel, promptType):
 
             try:
                 results = list(prolog.query(query))
-                print(f"Raw Results: {results}")
+                # print(f"Raw Results: {results}")
+                
+                if not bool(results):
+                    print("I don't currently know that.")
 
                 for result in results:
-                    print(result['X'])
+                    print(result['X'], end=" ")
 
             except Exception as e:
                 print(f"Error: {e}")
@@ -163,9 +166,6 @@ while True:
     
     choice = input(f"\n$ {c.CYAN}Prompt{c.END} > ")
 
-    # results = bool(list(prolog.query(choice)))
-    # print(results)
-    
     match choice.lower():
         case "help":
             print("Type any of the valid prompts and watch chatbot answer!\n")
@@ -186,6 +186,19 @@ while True:
         case "save":
             result = bool(list(Prolog.query("save_all.")))
             print("Successfully saved knowledge base!" if result else "Something went wrong while saving knowledge base.")
+        case "debug":
+            print(f"{c.RED}{c.BOLD}[ENTERING DEBUG MODE]{c.END}")
+            print("Type 'exit' to exit debugging mode.")
+            while True:
+                choice = input(f"\n$ {c.CYAN}Prompt{c.END} > ")
 
+                if choice.lower() == "exit":
+                    break
+            
+                results = list(prolog.query(choice))
+                print(f"Raw Results: {results}")
+                print(bool(results))
+            
+            print("Exited debug mode.")
         case _:
             parseSentence(choice)
