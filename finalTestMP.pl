@@ -255,7 +255,6 @@ aunt(Y, Child) :-
 uncle(Y, Child) :-
     male(Y),
     Y \= Child,
-    brother(Y, X),
     parent(X, Child),
     siblings(X, Y).
 
@@ -386,12 +385,12 @@ infer_logic(aunt, X, Y):-
       \+ (father(Y, X); mother(Y, X);
          brother(Y, X); sister(Y, X);
          uncle(Y, X); grandfather(Y, X);
-         grandmother(Y, X);parent(Y, X)),
+         grandmother(Y, X);parent(Y, X);
+         aunt(Y, X)),
         \+ (father(X, Y); mother(X, Y);
          brother(X, Y); sister(X, Y);
          uncle(X, Y); grandfather(X, Y);
          grandmother(X, Y);parent(X, Y)),
-
          X \= Y,
     (   \+ aunt(X, Y) -> assertz(aunt(X, Y)) ;true),
      (   \+ female(X) -> assertz(female(X)); true).
@@ -407,7 +406,7 @@ infer_logic(uncle, X, Y):-
      \+ aunt(X, Y),
      \+ parent(Y, X),
      \+ siblings(Y, X),
-     \+ uncle(Y, X), 
+     \+ uncle(Y, X),
      \+ aunt(Y, X),
 
      assertz(uncle(X, Y)),
