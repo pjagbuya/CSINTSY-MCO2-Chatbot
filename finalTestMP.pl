@@ -1,3 +1,11 @@
+% ->pip install git+https://github.com/yuce/pyswip@master#egg=pyswip
+% Declare your dynamically changing predicates
+% ALWAYS Assign Response with 'This Type of string', because "This is
+% considered byte string"
+% Underscores are considere Anon Variables, meaning you dont care
+% about their value and just there for syntax or list values that align
+% with the criteria
+% relatives is part of the requirement and not implemented yet
 
 :- dynamic sister/2.
 :- dynamic father/2.
