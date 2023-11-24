@@ -70,6 +70,11 @@ sister(X,Y):-
     sibling(X,Y);
     (parent(Par, X), parent(Par, Y)).
 
+sibling(X,Y):-
+    dif(X,Y),
+    parent(Z,X),
+    parent(Z,Y).
+
 % Concludes that they are related by any means is relatives, lacks
 % backtracking through ancestors
 % Recursive Check to conclude they are relatives or not
@@ -106,12 +111,15 @@ direct_relative(X, Y) :-
 % infer(relationship, A, B)
 % Cannot be a sibling of oneself
 assign_gender(male, X):-
-    (\+ male(X) -> assertz(male(X))).
+    infer_siblings,
+    (\+ male(X) -> (assertz(male(X)) ; true)) ; true.
 
 assign_gender(female, X):-
-    (\+ female(X) -> assertz(female(X))).
+    infer_siblings,
+    (\+ female(X) -> (assertz(female(X)) ; true)) ; true.
 
 infer(sibling, X, Y):-
+    sibling(X,Y);
     (child(X, Par), child(Y, Par)) ; (parent(Par, X), parent(Par, Y)),
     \+ sibling(X, Y),           % Check if X and Y are NOT siblings
     \+ sibling(Y, X),           % Check if Y and X are NOT siblings
@@ -120,52 +128,59 @@ infer(sibling, X, Y):-
     assertz(sibling(Y, X)).
 
 infer(sister, X, Y):-
+    sister(X,Y);
     female(X),
     infer(sibling, X, Y),
     (   \+ sister(X, Y) -> assertz(sister(X, Y)) ; false).    % If they're not yet sisters, assert that they are sisters.
 
 infer(brother, X, Y):-
+    brother(X,Y);
     male(X),
     infer(sibling, X, Y),
     (  \+ brother(X, Y)  -> assertz(brother(X, Y)); true).
 
 % You cannot be the aunt of someone who's your ancestor or sibling.
 infer(aunt, X, Y):-
+    aunt(X,Y);
     dif(X,Y),
     \+ male(X), \+ ancestor(Y,X), \+ sibling(X,Y), \+ child(Y,X),
     (   \+ aunt(X, Y) -> (assertz(aunt(X, Y)) ; assign_gender(female,X)) ; true).
 
 % You cannot be the uncle of someone who's your ancestor or sibling.
 infer(uncle, X, Y):-
+    uncle(X,Y);
     dif(X,Y),
     \+ female(X), \+ ancestor(Y,X), \+ sibling(Y,X), \+ child(Y,X),
     (  \+ uncle(X, Y) -> (assertz(uncle(X, Y)) ; assign_gender(male,X)) ;true).
 
 infer(father, X, Y):-
-    dif(X,Y), (direct_relative(X,Y) -> (father(X,Y) -> true) ; true),
+    father(X,Y);
+    dif(X,Y), (direct_relative(X,Y) -> (father(X,Y) -> true ; false) ; true),
     \+ female(X), \+ ancestor(Y,X), \+ sibling(X,Y), \+ grandparent(X,Y), infer(child, Y, X),
     (\+ parent(X,Y) -> (assertz(parent(X, Y)) ; assign_gender(male,X)) ;true).
 
 infer(mother, X, Y):-
-    dif(X,Y), (direct_relative(X,Y) -> (mother(X,Y) -> true) ; true),
+    dif(X,Y), (direct_relative(X,Y) -> (mother(X,Y) -> true ; false) ; true),
     \+ male(X),\+ ancestor(Y,X), \+ sibling(X,Y), \+ grandparent(X,Y), infer(child, Y, X),
     (\+ parent(X,Y) -> (assertz(parent(X, Y)) ; assign_gender(female,X)) ; true).
 
 infer(child, X, Parent):-
+
     dif(X, Parent),
-    \+ child(X, Parent),
+    % if child is already indicated as child, check if the parent gender is specific.
+    (child(X, Parent) -> ((father(Parent,X) ; mother(Parent,X)) -> false ; true) ; true),
     at_most_two_unique_parents(X),
-    assertz(child(X, Parent)).
+    (\+ child(X,Parent) -> (assertz(child(X, Parent)), assertz(parent(Parent, X))) ;  true).
 
 infer(son, X, Parent):-
     dif(X, Parent),
-    \+ female(X), \+ sibling(X,Parent), \+ ancestor(X, Parent),
-    (  \+ son(X, Parent) -> (assertz(child(X, Parent)) ; assign_gender(male,X)) ; true).
+    \+ female(X), \+ sibling(X,Parent), \+ ancestor(X, Parent), infer(child, X, Parent),
+    (\+ son(X, Parent) ->  assign_gender(male,X) ; true).
 
 infer(daughter, X, Parent):-
     dif(X, Parent),
-    \+ male(X), \+ sibling(X,Parent), \+ ancestor(X, Parent),
-    (   \+ daughter(X, Parent) -> (assertz(child(X, Parent)) ; assign_gender(female,X)) ; true).
+    \+ male(X), \+ sibling(X,Parent), \+ ancestor(X, Parent), infer(child, X, Parent),
+    (\+ daughter(X, Parent) ->  assign_gender(female, X) ; true).
 
 infer(grandfather, X, Y):-
     \+ female(X), (direct_relative(X,Y) -> (grandparent(X,Y) -> true)),
