@@ -294,3 +294,9 @@ delete_all :-
     retractall(children(_, _, _, _)),
     retractall(sibling(_, _)),
     retractall(relatives(_, _)).
+
+% will try to implement this soon.
+check_children([], _, 'Yes!'). % Base case: All names checked
+check_children([Child|Rest], Parent, Response):-
+    (   child(Child, Parent) -> check_children(Rest, Parent, Response)
+    ;   Response = 'No!', !).
