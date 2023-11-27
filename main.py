@@ -12,13 +12,6 @@ class c:
    END = '\033[0m'
 
 from pyswip import Prolog
-prolog = Prolog()
-
-os.system('cls')
-connected = bool(list(prolog.query("[\'Prolog/newKB.pl\', \'Prolog/assertions.pl\']")))
-print(c.BOLD + "[PROLOG]" + c.END +" Successfully Connected to Knowledge Base!" if connected
-      else "[PROLOG] Failed to Connect to Knowledge Base!")
-# prolog.consult("[\'newKB.pl\', \'saved.pl\']")
 
 #for sentence pattern relationship
 singular_rel = ["sibling", "brother", "sister",
@@ -59,6 +52,12 @@ factStatements = {
     r'(.+) is an uncle of (.+)\.',          r'(.+) is an aunt of (.+)\.'                      #7
 }
 
+def initTables():
+    result = bool(list(prolog.query("reset_tables")))
+
+def printBotHeader(quote):
+    print(f"$ {c.BOLD}{c.GREEN}CHATBOT{c.END} > {quote}")
+
 def findRelationship(sentence):
     foundRel = None
 
@@ -83,6 +82,7 @@ def findPattern(sentence, patternList):
 def constructResult(pattern, rel, promptType):
     query = ""
     parameters = pattern.groups()
+    initTables()
 
     match promptType:
         case "Boolean":
@@ -92,8 +92,7 @@ def constructResult(pattern, rel, promptType):
             try:
                 results = bool(list(prolog.query(query)))
                 # print(results)
-                print(f"$ {c.BOLD}{c.GREEN}CHATBOT{c.END} > ", end="")
-                print("Yes! You're absolutely right." if results else "No, that's not quite right.")
+                printBotHeader("Yes! You're absolutely right." if results else "No, that's not quite right.")
 
             except Exception as e:
                 print(f"Error: {e}")
@@ -107,8 +106,7 @@ def constructResult(pattern, rel, promptType):
                 # print(f"Raw Results: {results}")
                 
                 if not bool(results):
-                    print(f"$ {c.BOLD}{c.GREEN}CHATBOT{c.END} > ", end="")
-                    print("I don't currently know that.")
+                    printBotHeader("I currently don't know that.")
 
                 for result in results:
                     print(result['X'], end=" ")
@@ -117,13 +115,21 @@ def constructResult(pattern, rel, promptType):
                 print(f"Error: {e}")
             
         case "Insert":
-            query = "infer(" + rel + ",\'" + "\',\'".join(parameters) + "\')."
+            # Query 1 is to check whether that relationship already exists.
+            # Query 2 is to check if that relationship can exist.
+            query1 = rel + "(\'" + '\',\''.join(parameters) + "\')."
+            query2 = "infer(" + rel + ",\'" + "\',\'".join(parameters) + "\')."
             # print(f"[QUERY] {query}")
-
+            
             try:
-                results = bool(list(prolog.query(query)))
-                print(f"$ {c.BOLD}{c.GREEN}CHATBOT{c.END} > ", end="")
-                print("OK! I learned something." if results else "That's impossible!")
+                results = bool(list(prolog.query(query1)))
+                
+                if(results):
+                    printBotHeader("Thanks for telling me, but I already knew that.")
+                else:
+                    results = bool(list(prolog.query(query2)))
+                    printBotHeader("OK! I learned something." if results else "That's impossible!")
+
             except Exception as e:
                 print(f"Error: {e}")
 
@@ -155,6 +161,13 @@ def parseSentence(sentence):
     
     print("Invalid Prompt, try again.")
 
+prolog = Prolog()
+
+os.system('cls')
+connected = bool(list(prolog.query("[\'Prolog/newerKB.pl\', \'Prolog/assertions.pl\']")))
+print(c.BOLD + "[PROLOG]" + c.END +" Successfully Connected to Knowledge Base!" if connected
+      else "[PROLOG] Failed to Connect to Knowledge Base!")
+
 print('#'*50)
 print((" "*48).join('#'*2))
 print(f"#    Hi there, welcome to our {c.BOLD}{c.CYAN}CHATBOT SYSTEM{c.END}.    #")
@@ -164,7 +177,6 @@ print("To get started, input 'help' to view the commands!")
 
 while True:
     # DEBUGGING
-    # debugger = "Is bro a brother of alex?"
     
     choice = input(f"\n$ {c.CYAN}Prompt{c.END} > ")
 
@@ -188,9 +200,11 @@ while True:
         case "save":
             result = bool(list(Prolog.query("save_all.")))
             print("Successfully saved knowledge base!" if result else "Something went wrong while saving knowledge base.")
+
         case "debug":
             print(f"{c.RED}{c.BOLD}[ENTERING DEBUG MODE]{c.END}")
             print("Type 'exit' to exit debugging mode.")
+
             while True:
                 choice = input(f"\n$ {c.CYAN}Prompt{c.END} > ")
 
