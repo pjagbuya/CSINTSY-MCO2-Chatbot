@@ -17,7 +17,7 @@ from pyswip import Prolog
 singular_rel = ["sibling", "brother", "sister",
                 "father", "mother", "parent",
                 "grandmother", "grandfather", "child",
-                "daughter", "son", "uncle", "aunt", "relatives"]
+                "daughter", "son", "uncle", "aunt", "relatives", "children"]
 
 # Regex Pattern for Questions
 yesNoQuestions = [  r'Are (.+) and (.+) siblings\?',                r'Is (.+) a sister of (.+)\?',
@@ -58,6 +58,15 @@ def initTables():
 def printBotHeader(quote):
     print(f"$ {c.BOLD}{c.GREEN}CHATBOT{c.END} > {quote}")
 
+def combineChildren(children):
+    childrenList = ' '.join(children[0].split(',')).split()
+
+    childrenList.append(children[1])
+    
+    childrenList = "['" + '\',\''.join(childrenList) + "']"
+
+    return childrenList
+
 def findRelationship(sentence):
     foundRel = None
 
@@ -81,12 +90,20 @@ def findPattern(sentence, patternList):
 
 def constructResult(pattern, rel, promptType):
     query = ""
-    parameters = pattern.groups()
+    parameters = list(pattern.groups())
     initTables()
+
+    if(len(parameters) > 2):
+        parameters[0] = combineChildren(parameters)
+        del parameters[1]
+        convertedParams = parameters
+        convertedParams[1] = f"\'{convertedParams[1]}\'"
+    else:
+        convertedParams = ["'{}'".format(i) for i in parameters]
 
     match promptType:
         case "Boolean":
-            query = rel + "(\'" + '\',\''.join(parameters) + "\')."
+            query = f"{rel}({convertedParams[0]}, {convertedParams[1]})."
             # print(f"[QUERY] {query}")
 
             try:
@@ -98,7 +115,7 @@ def constructResult(pattern, rel, promptType):
                 print(f"Error: {e}")
 
         case "Who":
-            query = f"{rel}(X,\'{parameters[0]}\')."
+            query = f"{rel}(X,{convertedParams[0]})."
             # print(f"[QUERY] {query}")
 
             try:
@@ -117,9 +134,9 @@ def constructResult(pattern, rel, promptType):
         case "Insert":
             # Query 1 is to check whether that relationship already exists.
             # Query 2 is to check if that relationship can exist.
-            query1 = rel + "(\'" + '\',\''.join(parameters) + "\')."
-            query2 = "infer(" + rel + ",\'" + "\',\'".join(parameters) + "\')."
-            # print(f"[QUERY] {query}")
+            query1 = f"{rel}({convertedParams[0]}, {convertedParams[1]})."
+            query2 = f"infer({rel}, {convertedParams[0]}, {convertedParams[1]})."
+            print(f"[QUERY] {query1}")
             
             try:
                 results = bool(list(prolog.query(query1)))

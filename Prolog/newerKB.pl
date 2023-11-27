@@ -97,6 +97,11 @@ daughter(X,Y):-
 
 
 % More Complex Relationships
+children([],_).
+
+children([X|TAIL],Y):-
+    child(X,Y),
+    children(TAIL, Y).
 
 % Direct predecessor
 direct_predecessor(X,Y):-
@@ -247,20 +252,17 @@ infer(grandmother, X, Y):-
     infer(grandparent, X, Y),
     assign_gender(female, X).
 
-infer(children, Name1, Name2, Name3, Parent):-
-    (valid_parent_child(Name1, Parent),
-     valid_parent_child(Name2, Parent),
-     valid_parent_child(Name3, Parent),
-     assertz(child(Name1,Parent)),
-     assertz(child(Name2,Parent)),
-     assertz(child(Name3,Parent))).
-
 infer(parents, P1, P2, Child):-
     add_parents_to_child(P1, P2, Child),
 
       (\+ clause(parents(P1, P2, Child), true) ->
         assertz(parents(P1, P2, Child))
     ;   true).
+
+infer(children, _, _).
+infer(children, [Child|List], Parent):-
+    (child(Child, Parent) ; infer(child, Child, Parent)),
+    infer(children, List, Parent).
 
 % HELPER FUNCTIONS SECTION
 
