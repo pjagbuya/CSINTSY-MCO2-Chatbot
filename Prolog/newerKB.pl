@@ -181,7 +181,7 @@ infer(uncle, X, Y):-
 infer(parent, X, Y):-
     dif(X,Y),
     can_have_additional_parent(Y),
-    is_valid_parent(X,Y),
+    is_valid_ancestor(X,Y),
     asserta(parent(X,Y)),
     asserta(child(Y,X)).
 
@@ -233,8 +233,7 @@ infer(daughter, X, Parent):-
 
 infer(grandparent, X, Y):-
     dif(X, Y),
-    \+ sibling(X, Y),
-    \+ predecessor(Y, X),
+    is_valid_ancestor(X, Y),
     \+ child(Y, X),     % Your own child cannot be your grandchild.
     asserta(grandparent(X,Y)).
 
@@ -292,6 +291,6 @@ reset_tables:-
     table predecessor/2.
     table relatives/2.
 
-is_valid_parent(X, Y):-
+is_valid_ancestor(X, Y):-
     \+ predecessor(Y, X),
     \+ sibling(X, Y).
