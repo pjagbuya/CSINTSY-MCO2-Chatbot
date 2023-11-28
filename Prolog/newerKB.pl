@@ -108,7 +108,7 @@ spouse(X,Y):-
 % END OF BASIC RELATIONSHIPS
 
 
-% More Complex Relationships
+% START COMPLEX RELATIONSHIPS
 direct_succesor(X,Y):-
     dif(X,Y),
     (
@@ -156,14 +156,13 @@ relatives(X,Y):-
 
 children([],_).
 
-% TODO: Remember to fix this, it's conflicting with "Who are the children of"
 children([X|TAIL],Y):-
     child(X,Y),
     children(TAIL, Y).
 
 % END OF COMPLEX RELATIONSHIPS
 
-% INFER LOGICS
+% START OF INFERENCE LOGIC
 
 infer(sibling, X, Y):-
     dif(X,Y),                       % A person is not their own sibling condition
@@ -174,6 +173,7 @@ infer(sibling, X, Y):-
     asserta(sibling(X, Y)),
     asserta(sibling(Y, X)).
 
+% Already siblings, gender is just not specified.
 infer(sister, X, Y):-
     \+ male(X), sibling(X,Y), asserta(female(X)).
 
@@ -182,6 +182,7 @@ infer(sister, X, Y):-
     infer(sibling, X, Y),
     assign_gender(female, X).
 
+% Already siblings, gender is just not specified.
 infer(brother, X, Y):-
     \+ female(X), sibling(X,Y), asserta(male(X)).
 
@@ -193,15 +194,18 @@ infer(brother, X, Y):-
 % You cannot be the aunt of someone who's your ancestor or sibling.
 infer(aunt, X, Y):-
     dif(X,Y),
-    female(X),
-    \+ predecessor(Y,X),
-    \+ sibling(X,Y),
-    \+ child(Y,X),
+    \+ male(X),
+    is_valid_ancestor(X, Y),
+    assign_gender(female, X),
     asserta(aunt(X,Y)).
 
-% You cannot be the uncle of someone who's your ancestor or sibling.
+% You cannot be the aunt of someone who's your ancestor or sibling.
 infer(uncle, X, Y):-
-    uncle(X,Y).
+    dif(X,Y),
+    \+ female(X),
+    is_valid_ancestor(X, Y),
+    assign_gender(male, X),
+    asserta(uncle(X,Y)).
 
 infer(parent, X, Y):-
     dif(X,Y),
@@ -235,9 +239,7 @@ infer(mother, X, Y):-
 infer(child, Child, Parent):-
     dif(Child, Parent),
     can_have_additional_parent(Child),
-    \+ predecessor(Child, Parent),
-    \+ predecessor(Parent, Child),
-    \+ sibling(Child, Parent),
+    is_valid_ancestor(Parent, Child),
     asserta(parent(Parent, Child)),
     asserta(child(Child, Parent)).
 
@@ -295,6 +297,8 @@ infer(children, [Child|List], Parent):-
     (child(Child, Parent) ; infer(child, Child, Parent)),
     !, infer(children, List, Parent).
 
+% END OF INFERENCE LOGIC
+
 % HELPER FUNCTIONS SECTION
 
 assign_gender(male, X):-
@@ -320,5 +324,6 @@ reset_tables:-
     table relatives/2.
 
 is_valid_ancestor(X, Y):-
+    \+ predecessor(X, Y),
     \+ predecessor(Y, X),
     \+ sibling(X, Y).

@@ -62,6 +62,7 @@ def initTables():
 
 def printBotHeader(quote):
     print(f"$ {c.BOLD}{c.GREEN}CHATBOT{c.END} > {quote}")
+    
 def printResults(results, person, rel):
     results.sort()
     isMany = len(results) > 1
@@ -152,7 +153,7 @@ def constructResult(pattern, rel, promptType):
                 rel = pluralToSingle[rel]
                 
             query = f"{rel}(X,{convertedParams[0]})."
-            print(f"[QUERY] {query}")
+            # print(f"[QUERY] {query}")
 
             try:
                 results = list(prolog.query(query))
