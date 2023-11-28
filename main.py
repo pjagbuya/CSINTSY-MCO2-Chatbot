@@ -17,7 +17,8 @@ from pyswip import Prolog
 singular_rel = ["sibling", "brother", "sister",
                 "father", "mother", "parent",
                 "grandmother", "grandfather", "child",
-                "daughter", "son", "uncle", "aunt", "relatives", "children"]
+                "daughter", "son", "uncle", "aunt", 
+                "relatives", "children", "parents"]
 
 # Regex Pattern for Questions
 yesNoQuestions = [  r'Are (.+) and (.+) siblings\?',                r'Is (.+) a sister of (.+)\?',
@@ -53,7 +54,8 @@ factStatements = {
 }
 
 def initTables():
-    result = bool(list(prolog.query("reset_tables")))
+    # result = bool(list(prolog.query("reset_tables")))
+    pass
 
 def printBotHeader(quote):
     print(f"$ {c.BOLD}{c.GREEN}CHATBOT{c.END} > {quote}")
@@ -116,17 +118,22 @@ def constructResult(pattern, rel, promptType):
 
         case "Who":
             query = f"{rel}(X,{convertedParams[0]})."
-            # print(f"[QUERY] {query}")
+            print(f"[QUERY] {query}")
 
             try:
                 results = list(prolog.query(query))
                 # print(f"Raw Results: {results}")
-                
+                resultList = []
                 if not bool(results):
                     printBotHeader("I currently don't know that.")
 
                 for result in results:
                     print(result['X'], end=" ")
+                #     resultList.append(str(result['X']))
+
+                # resultList = list(dict.fromkeys(resultList))
+                # print(resultList)
+                # print(results)
 
             except Exception as e:
                 print(f"Error: {e}")
@@ -137,6 +144,7 @@ def constructResult(pattern, rel, promptType):
             query1 = f"{rel}({convertedParams[0]}, {convertedParams[1]})."
             query2 = f"infer({rel}, {convertedParams[0]}, {convertedParams[1]})."
             print(f"[QUERY] {query1}")
+            print(f"[QUERY] {query2}")
             
             try:
                 results = bool(list(prolog.query(query1)))

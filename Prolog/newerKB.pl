@@ -1,7 +1,7 @@
 % TABLING FOR RECURSIVE RELATIONSHIPS
-:- table sibling/2.
-:- table relatives/2.
-:- table predecessor/2.
+:- table sibling/2 as incremental.
+:- table relatives/2 as incremental.
+:- table predecessor/2 as incremental.
 
 % GENERIC PREDICATES
 :- dynamic parent/2.
@@ -19,12 +19,12 @@
 :- dynamic uncle/2.
 :- dynamic son/2.
 :- dynamic daughter/2.
-:- dynamic sibling/2.
+:- dynamic([sibling/2], [incremental(true)]).
 :- dynamic brother/2.
 :- dynamic sister/2.
-:- dynamic predecessor/2.
+:- dynamic([predecessor/2], [incremental(true)]).
 :- dynamic direct_predecessor/2.
-:- dynamic relatives/2.
+:- dynamic([relatives/2], [incremental(true)]).
 :- dynamic assign_gender/2.
 :- discontiguous infer/3.
 
@@ -93,12 +93,17 @@ daughter(X,Y):-
     female(X),
     child(X,Y).
 
+parents([X|Y], Z):-
+    parent(X,Z),
+    parent(Y,Z).
+
 % END OF BASIC RELATIONSHIPS
 
 
 % More Complex Relationships
 children([],_).
 
+% Remember to fix this, it's conflicting with "Who are the children of"
 children([X|TAIL],Y):-
     child(X,Y),
     children(TAIL, Y).
@@ -138,7 +143,6 @@ relatives(X,Y):-
 
 % INFER LOGICS
 
-    
 infer(sibling, X, Y):-
     dif(X,Y),                   % A person is not their own sibling condition
     \+ relatives(X,Y),
@@ -252,12 +256,12 @@ infer(grandmother, X, Y):-
     infer(grandparent, X, Y),
     assign_gender(female, X).
 
-infer(parents, P1, P2, Child):-
-    add_parents_to_child(P1, P2, Child),
+infer(parents, _, _).
 
-      (\+ clause(parents(P1, P2, Child), true) ->
-        assertz(parents(P1, P2, Child))
-    ;   true).
+infer(parents, [Parent|List], Child):-
+    does_not_have_parents(child),
+    infer(parent, Parent, Child),
+    infer(parents, List, Child).
 
 infer(children, _, _).
 infer(children, [Child|List], Parent):-
@@ -276,6 +280,11 @@ can_have_additional_parent(Child) :-
     findall(P, child(Child, P), Parents),
     length(Parents, Count),
     Count < 2.  % There are less than 2 parents
+
+does_not_have_parents(Child) :-
+    findall(P, child(Child, P), Parents),
+    length(Parents, Count),
+    Count < 1.  % There are no parents.
 
 reset_tables:-
     abolish_all_tables.
