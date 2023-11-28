@@ -2,6 +2,7 @@
 :- table sibling/2 as incremental.
 :- table relatives/2 as incremental.
 :- table predecessor/2 as incremental.
+:- table successor/2 as incremental.
 
 % GENERIC PREDICATES
 :- dynamic parent/2.
@@ -23,9 +24,11 @@
 :- dynamic brother/2.
 :- dynamic sister/2.
 :- dynamic([predecessor/2], [incremental(true)]).
+:- dynamic([successor/2], [incremental(true)]).
 :- dynamic direct_predecessor/2.
 :- dynamic([relatives/2], [incremental(true)]).
-:- dynamic assign_gender/2.
+% :- dynamic assign_gender/2.
+:- dynamic spouse/2.
 :- discontiguous infer/3.
 
 % BASIC RELATIONSHIPS
@@ -93,20 +96,32 @@ daughter(X,Y):-
     female(X),
     child(X,Y).
 
+parents([],_).
 parents([X|Y], Z):-
     parent(X,Z),
     parent(Y,Z).
+
+spouse(X,Y):-
+    child(Z,Y),
+    child(Z,X).
 
 % END OF BASIC RELATIONSHIPS
 
 
 % More Complex Relationships
-children([],_).
+direct_succesor(X,Y):-
+    dif(X,Y),
+    (
+        child(X,Y);
+        (sibling(Z,Y), child(X, Z))
+    ).
 
-% Remember to fix this, it's conflicting with "Who are the children of"
-children([X|TAIL],Y):-
-    child(X,Y),
-    children(TAIL, Y).
+successor(X,Y):-
+    direct_succesor(X,Y).
+
+successor(X,Y):-
+    direct_succesor(Z, X),
+    successor(Y, Z).
 
 % Direct predecessor
 direct_predecessor(X,Y):-
@@ -139,15 +154,25 @@ relatives(X,Y):-
     predecessor(Z,X),
     predecessor(Z,Y).
 
+children([],_).
+
+% TODO: Remember to fix this, it's conflicting with "Who are the children of"
+children([X|TAIL],Y):-
+    child(X,Y),
+    children(TAIL, Y).
+
 % END OF COMPLEX RELATIONSHIPS
 
 % INFER LOGICS
 
 infer(sibling, X, Y):-
-    dif(X,Y),                   % A person is not their own sibling condition
+    dif(X,Y),                       % A person is not their own sibling condition
+    \+ spouse(X,Y),                 % Incest problem
+    \+ (spouse(X,Z), sibling(Y,Z)), % You can't be siblings with both parents.
+    \+ successor(Y,X),              % You can't be siblings with your sibling's child.
     \+ relatives(X,Y),
-    assertz(sibling(X, Y)),
-    assertz(sibling(Y, X)).
+    asserta(sibling(X, Y)),
+    asserta(sibling(Y, X)).
 
 infer(sister, X, Y):-
     \+ male(X), sibling(X,Y), asserta(female(X)).
@@ -211,6 +236,7 @@ infer(child, Child, Parent):-
     dif(Child, Parent),
     can_have_additional_parent(Child),
     \+ predecessor(Child, Parent),
+    \+ predecessor(Parent, Child),
     \+ sibling(Child, Parent),
     asserta(parent(Parent, Child)),
     asserta(child(Child, Parent)).
@@ -255,17 +281,19 @@ infer(grandmother, X, Y):-
     infer(grandparent, X, Y),
     assign_gender(female, X).
 
-infer(parents, _, _).
+infer(parents, [], _).
 
-infer(parents, [Parent|List], Child):-
+infer(parents, [P1, P2|_], Child):-
     does_not_have_parents(child),
-    infer(parent, Parent, Child),
-    infer(parents, List, Child).
+    \+ sibling(P1, P2),
+    infer(parent, P1, Child),
+    infer(parent, P2, Child).
 
-infer(children, _, _).
+infer(children, [], _).
+
 infer(children, [Child|List], Parent):-
     (child(Child, Parent) ; infer(child, Child, Parent)),
-    infer(children, List, Parent).
+    !, infer(children, List, Parent).
 
 % HELPER FUNCTIONS SECTION
 

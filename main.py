@@ -53,13 +53,44 @@ factStatements = {
     r'(.+) is an uncle of (.+)\.',          r'(.+) is an aunt of (.+)\.'                      #7
 }
 
+pluralToSingle = {"children": "child",
+                  "parents": "parent",
+                  "relatives": "relatives"}
 def initTables():
     # result = bool(list(prolog.query("reset_tables")))
     pass
 
 def printBotHeader(quote):
     print(f"$ {c.BOLD}{c.GREEN}CHATBOT{c.END} > {quote}")
+def printResults(results, person, rel):
+    results.sort()
+    isMany = len(results) > 1
 
+    if not isMany and rel in pluralToSingle.keys():
+        rel = pluralToSingle[rel]
+
+    if isMany and rel in pluralToSingle.values():
+        rel = [key for key in pluralToSingle if pluralToSingle[key] == rel]
+        rel = rel[0]
+    elif isMany:
+        rel += 's'
+    
+    quote = f'The {rel} of {person} {"is" if not isMany else "are"} '
+    
+    if not isMany:
+        quote += results[0] + "."
+    else:
+        for i in range(len(results)):
+            if (i+1 == len(results)):
+                quote += f" and {results[i]}."
+            else:
+                quote += f"{results[i]}"
+
+            if(i < len(results) - 2):
+                quote += ", "
+
+    printBotHeader(quote)
+    
 def combineChildren(children):
     childrenList = ' '.join(children[0].split(',')).split()
 
@@ -117,6 +148,9 @@ def constructResult(pattern, rel, promptType):
                 print(f"Error: {e}")
 
         case "Who":
+            if rel in pluralToSingle.keys():
+                rel = pluralToSingle[rel]
+                
             query = f"{rel}(X,{convertedParams[0]})."
             print(f"[QUERY] {query}")
 
@@ -124,16 +158,14 @@ def constructResult(pattern, rel, promptType):
                 results = list(prolog.query(query))
                 # print(f"Raw Results: {results}")
                 resultList = []
+
                 if not bool(results):
                     printBotHeader("I currently don't know that.")
+                else:
+                    for result in results:
+                        resultList.append(result['X'])
+                    printResults(resultList, parameters[-1], rel)
 
-                for result in results:
-                    print(result['X'], end=" ")
-                #     resultList.append(str(result['X']))
-
-                # resultList = list(dict.fromkeys(resultList))
-                # print(resultList)
-                # print(results)
 
             except Exception as e:
                 print(f"Error: {e}")
@@ -143,8 +175,8 @@ def constructResult(pattern, rel, promptType):
             # Query 2 is to check if that relationship can exist.
             query1 = f"{rel}({convertedParams[0]}, {convertedParams[1]})."
             query2 = f"infer({rel}, {convertedParams[0]}, {convertedParams[1]})."
-            print(f"[QUERY] {query1}")
-            print(f"[QUERY] {query2}")
+            # print(f"[QUERY] {query1}")
+            # print(f"[QUERY] {query2}")
             
             try:
                 results = bool(list(prolog.query(query1)))
