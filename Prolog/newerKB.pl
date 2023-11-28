@@ -195,6 +195,7 @@ infer(brother, X, Y):-
 infer(aunt, X, Y):-
     dif(X,Y),
     \+ male(X),
+    \+ predecessor(X, Y),
     is_valid_ancestor(X, Y),
     assign_gender(female, X),
     asserta(aunt(X,Y)).
@@ -203,6 +204,7 @@ infer(aunt, X, Y):-
 infer(uncle, X, Y):-
     dif(X,Y),
     \+ female(X),
+    \+ predecessor(X, Y),
     is_valid_ancestor(X, Y),
     assign_gender(male, X),
     asserta(uncle(X,Y)).
@@ -210,6 +212,7 @@ infer(uncle, X, Y):-
 infer(parent, X, Y):-
     dif(X,Y),
     can_have_additional_parent(Y),
+    \+ predecessor(X, Y),
     is_valid_ancestor(X,Y),
     asserta(parent(X,Y)),
     asserta(child(Y,X)).
@@ -324,6 +327,38 @@ reset_tables:-
     table relatives/2.
 
 is_valid_ancestor(X, Y):-
-    \+ predecessor(X, Y),
     \+ predecessor(Y, X),
     \+ sibling(X, Y).
+
+save_all :-
+    tell('Prolog/saveFacts.pl'),
+    listing(sister/2),
+    listing(father/2),
+    listing(mother/2),
+    listing(brother/2),
+    listing(grandmother/2),
+    listing(daughter/2),
+    listing(uncle/2),
+    listing(child/2),
+    listing(son/2),
+    listing(aunt/2),
+    listing(grandfather/2),
+    listing(sibling/2),
+    told.                   % Close the file
+
+delete_all :-
+    retractall(sister(_, _)),
+    retractall(father(_, _)),
+    retractall(mother(_, _)),
+    retractall(brother(_, _)),
+    retractall(grandmother(_, _)),
+    retractall(daughter(_, _)),
+    retractall(uncle(_, _)),
+    retractall(child(_, _)),
+    retractall(son(_, _)),
+    retractall(aunt(_, _)),
+    retractall(grandfather(_, _)),
+    retractall(parents(_, _, _)),
+    retractall(children(_, _, _, _)),
+    retractall(sibling(_, _)),
+    retractall(relatives(_, _)).

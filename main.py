@@ -62,7 +62,7 @@ def initTables():
 
 def printBotHeader(quote):
     print(f"$ {c.BOLD}{c.GREEN}CHATBOT{c.END} > {quote}")
-    
+
 def printResults(results, person, rel):
     results.sort()
     isMany = len(results) > 1
@@ -276,3 +276,4 @@ while True:
             print("Exited debug mode.")
         case _:
             parseSentence(choice)
+
